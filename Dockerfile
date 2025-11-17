@@ -1,6 +1,6 @@
 FROM php:8.1-apache
 
-# Instalar dependencias y extensiones requeridas por Moodle
+# Instalar dependencias
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -13,17 +13,22 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     && docker-php-ext-install mysqli gd xml zip intl
 
-# Crear el directorio de datos de Moodle (writable en Render)
-RUN mkdir -p /var/moodledata \
-    && chown -R www-data:www-data /var/moodledata \
-    && chmod -R 775 /var/moodledata
+# Configurar DocumentRoot
+WORKDIR /var/www/html
 
-# Descargar Moodle
+# Descargar Moodle (solo el código)
 RUN git clone -b MOODLE_402_STABLE https://github.com/moodle/moodle.git /var/www/html \
     && chown -R www-data:www-data /var/www/html
 
-# Exponer puerto HTTP
+# Crear carpetas donde Render montará sus volúmenes
+RUN mkdir -p /var/www/moodledata \
+    && mkdir -p /var/www/config \
+    && chown -R www-data:www-data /var/www/moodledata /var/www/config
+
+# Moodle busca config.php en /var/www/html; lo linkeamos hacia volumen persistente
+RUN ln -s /var/www/config/config.php /var/www/html/config.php || true
+
 EXPOSE 80
 
-# Comando final default de Apache
 CMD ["apache2-foreground"]
+
